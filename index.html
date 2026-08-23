@@ -1,0 +1,1117 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Multiversal Suite C-137</title>
+    <!-- Librería para lectura de códigos de barras (QuaggaJS) -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/quagga/0.12.1/quagga.min.js"></script>
+    <!-- Librerías de Inteligencia Artificial para Reconocimiento de Objetos en Tiempo Real (TensorFlow.js) -->
+    <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@tensorflow-models/coco-ssd"></script>
+    <style>
+        :root {
+            --prime-color: #00ff88;
+            --prime-dark: #003311;
+            --prime-bg: #020a05;
+            --card-bg: #08170d;
+            --prime-glow: rgba(0, 255, 136, 0.45);
+            --text-color: #e0ffe8;
+        }
+
+        * {
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Courier New', Courier, monospace;
+            background-color: var(--prime-bg);
+            color: var(--text-color);
+            margin: 0;
+            padding: 20px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            transition: all 0.3s ease;
+        }
+
+        .container {
+            width: 100%;
+            max-width: 800px;
+            background-color: var(--card-bg);
+            border: 2px solid var(--prime-color);
+            border-radius: 12px;
+            padding: 25px;
+            box-shadow: 0 0 30px var(--prime-glow);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .container::before {
+            content: " ";
+            display: block;
+            position: absolute;
+            top: 0; left: 0; bottom: 0; right: 0;
+            background: linear-gradient(rgba(18, 10, 25, 0) 50%, rgba(0, 0, 0, 0.35) 50%);
+            background-size: 100% 4px;
+            z-index: 2;
+            pointer-events: none;
+            opacity: 0.7;
+        }
+
+        header {
+            text-align: center;
+            border-bottom: 2px solid var(--prime-dark);
+            padding-bottom: 15px;
+            margin-bottom: 20px;
+        }
+
+        h1 {
+            margin: 0;
+            color: var(--prime-color);
+            font-size: 1.9rem;
+            letter-spacing: 4px;
+            text-transform: uppercase;
+            text-shadow: 0 0 12px var(--prime-color);
+        }
+
+        .badge {
+            display: inline-block;
+            background: var(--prime-dark);
+            color: var(--prime-color);
+            padding: 4px 10px;
+            font-size: 0.75rem;
+            border-radius: 4px;
+            margin-top: 5px;
+            letter-spacing: 1px;
+            border: 1px solid var(--prime-color);
+        }
+
+        .nav-tabs {
+            display: flex;
+            gap: 8px;
+            margin-bottom: 20px;
+            flex-wrap: wrap;
+            position: relative;
+            z-index: 3;
+        }
+
+        .tab-btn {
+            flex: 1;
+            padding: 10px;
+            background: #000;
+            border: 1px solid var(--prime-color);
+            color: var(--prime-color);
+            cursor: pointer;
+            font-family: inherit;
+            font-weight: bold;
+            border-radius: 6px;
+            min-width: 110px;
+            font-size: 0.85rem;
+            transition: all 0.2s;
+        }
+
+        .tab-btn.active, .tab-btn:hover {
+            background: var(--prime-color);
+            color: #000;
+            box-shadow: 0 0 15px var(--prime-glow);
+        }
+
+        .tab-content {
+            display: none;
+            position: relative;
+            z-index: 3;
+        }
+
+        .tab-content.active {
+            display: block;
+        }
+
+        .control-group {
+            margin-bottom: 15px;
+        }
+
+        label {
+            display: block;
+            color: var(--prime-color);
+            font-size: 0.9rem;
+            margin-bottom: 5px;
+            font-weight: bold;
+        }
+
+        textarea, select {
+            width: 100%;
+            background-color: #000;
+            border: 1px solid var(--prime-dark);
+            color: #fff;
+            padding: 12px;
+            border-radius: 6px;
+            font-family: inherit;
+            font-size: 1rem;
+            outline: none;
+            transition: all 0.3s;
+        }
+
+        textarea:focus, select:focus {
+            border-color: var(--prime-color);
+            box-shadow: 0 0 12px var(--prime-glow);
+        }
+
+        button.main-btn {
+            width: 100%;
+            padding: 14px;
+            background-color: transparent;
+            border: 2px solid var(--prime-color);
+            color: var(--prime-color);
+            font-family: inherit;
+            font-size: 1.1rem;
+            font-weight: bold;
+            letter-spacing: 2px;
+            border-radius: 6px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            text-transform: uppercase;
+            box-shadow: 0 0 12px var(--prime-glow);
+            margin-top: 10px;
+            user-select: none;
+        }
+
+        button.main-btn:hover {
+            background-color: var(--prime-color);
+            color: #000;
+            box-shadow: 0 0 25px var(--prime-color);
+        }
+
+        .action-buttons {
+            display: flex;
+            gap: 10px;
+            margin-top: 15px;
+        }
+
+        .btn-play, .btn-copy {
+            background-color: var(--prime-dark);
+            border: 1px solid var(--prime-color);
+            color: var(--prime-color);
+            display: none;
+            flex: 1;
+            padding: 10px;
+            font-family: inherit;
+            font-weight: bold;
+            border-radius: 6px;
+            cursor: pointer;
+        }
+
+        .scan-overlay {
+            display: none;
+            margin: 20px 0;
+            background: #000;
+            border: 1px dashed var(--prime-color);
+            padding: 15px;
+            border-radius: 6px;
+        }
+
+        .progress-bar {
+            height: 4px;
+            width: 0%;
+            background-color: var(--prime-color);
+            box-shadow: 0 0 12px var(--prime-color);
+            transition: width 0.1s linear;
+        }
+
+        .scan-text {
+            font-size: 0.85rem;
+            color: var(--prime-color);
+            margin-top: 8px;
+            animation: blink 0.8s infinite alternate;
+        }
+
+        @keyframes blink {
+            from { opacity: 0.4; }
+            to { opacity: 1; }
+        }
+
+        .light-container {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-top: 10px;
+        }
+
+        .signal-light {
+            width: 22px;
+            height: 22px;
+            border-radius: 50%;
+            background-color: var(--prime-dark);
+            border: 2px solid var(--prime-color);
+            transition: background-color 0.05s, box-shadow 0.05s;
+        }
+
+        .signal-light.active {
+            background-color: var(--prime-color);
+            box-shadow: 0 0 25px var(--prime-color), 0 0 50px var(--prime-color);
+        }
+
+        .output-box {
+            margin-top: 10px;
+            background-color: #000;
+            border: 1px solid var(--prime-color);
+            border-radius: 6px;
+            padding: 15px;
+            min-height: 70px;
+            word-break: break-all;
+            color: var(--text-color);
+            font-size: 1.15rem;
+            text-shadow: 0 0 8px var(--prime-glow);
+        }
+
+        .telegraph-section {
+            margin-top: 25px;
+            padding-top: 20px;
+            border-top: 2px dashed var(--prime-dark);
+        }
+
+        .telegraph-btn {
+            background: radial-gradient(circle, var(--prime-dark) 0%, #000 100%);
+            border: 2px solid var(--prime-color);
+            color: var(--prime-color);
+            height: 75px;
+            font-size: 1.2rem;
+            border-radius: 8px;
+            margin-top: 10px;
+            width: 100%;
+            font-family: inherit;
+            font-weight: bold;
+            cursor: pointer;
+        }
+
+        .telegraph-btn:active, .telegraph-btn.active {
+            background: var(--prime-color);
+            color: #000;
+            box-shadow: 0 0 35px var(--prime-color);
+        }
+
+        .realtime-box {
+            background-color: #000;
+            border: 1px solid var(--prime-dark);
+            border-radius: 6px;
+            padding: 10px;
+            margin-top: 10px;
+            min-height: 35px;
+            color: var(--prime-color);
+            font-size: 1rem;
+            word-break: break-all;
+        }
+
+        .collapsible-btn {
+            background-color: #000;
+            border: 1px solid var(--prime-dark);
+            color: var(--prime-color);
+            font-size: 0.9rem;
+            padding: 10px;
+            margin-top: 20px;
+            text-align: left;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            width: 100%;
+            cursor: pointer;
+            font-family: inherit;
+        }
+
+        .collapsible-content {
+            max-height: 0;
+            overflow: hidden;
+            transition: max-height 0.3s ease-out;
+            background-color: #000;
+            border: 1px solid var(--prime-dark);
+            border-top: none;
+            border-radius: 0 0 6px 6px;
+            padding: 0 15px;
+        }
+
+        .morse-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(65px, 1fr));
+            gap: 8px;
+            padding: 15px 0;
+        }
+
+        .morse-item {
+            background-color: var(--card-bg);
+            border: 1px solid var(--prime-dark);
+            border-radius: 4px;
+            padding: 5px;
+            text-align: center;
+            font-size: 0.85rem;
+        }
+
+        .morse-item span {
+            color: var(--prime-color);
+            font-weight: bold;
+            display: block;
+        }
+
+        .camera-viewport {
+            width: 100%;
+            height: 320px;
+            background: #000;
+            border: 2px dashed var(--prime-color);
+            border-radius: 8px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            position: relative;
+            overflow: hidden;
+        }
+
+        video, canvas.overlay-canvas {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+
+        .scanner-laser {
+            position: absolute;
+            width: 100%;
+            height: 2px;
+            background: var(--prime-color);
+            box-shadow: 0 0 15px var(--prime-color);
+            animation: scan 2s infinite ease-in-out;
+            display: none;
+            z-index: 10;
+        }
+
+        @keyframes scan {
+            0% { top: 0%; }
+            50% { top: 100%; }
+            100% { top: 0%; }
+        }
+
+        .color-presets {
+            display: flex;
+            gap: 12px;
+            margin-top: 10px;
+        }
+
+        .color-circle {
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+            cursor: pointer;
+            border: 2px solid #fff;
+            box-shadow: 0 0 10px rgba(255,255,255,0.2);
+        }
+
+        .btn-clear {
+            padding: 8px;
+            font-size: 0.8rem;
+            background-color: var(--prime-dark);
+            border: 1px solid var(--prime-color);
+            color: var(--prime-color);
+            margin-top: 5px;
+            cursor: pointer;
+            border-radius: 4px;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="container">
+        <header>
+            <h1>TRANSLATOR C-137</h1>
+            <span class="badge">PROCESADOR MULTIVERSAL COMPLETO</span>
+        </header>
+
+        <div class="nav-tabs">
+            <button class="tab-btn active" onclick="switchTab('traductor', event)">Traductor</button>
+            <button class="tab-btn" onclick="switchTab('escaner', event)">Escáner IA</button>
+            <button class="tab-btn" onclick="switchTab('productos', event)">Productos</button>
+            <button class="tab-btn" onclick="switchTab('config', event)">Color Neón</button>
+        </div>
+
+        <!-- PESTAÑA PRINCIPAL: TRADUCTOR TRADICIONAL + NEKO + TELÉGRAFO -->
+        <div id="tab-traductor" class="tab-content active">
+            <div class="control-group">
+                <label for="modeSelect">Dirección del Procesamiento:</label>
+                <select id="modeSelect" onchange="toggleMode()">
+                    <option value="encode">Codificar: Texto ➔ Idioma Seleccionado</option>
+                    <option value="decode">Decodificar: Idioma Seleccionado ➔ Español</option>
+                </select>
+            </div>
+
+            <div class="control-group">
+                <label for="inputText" id="inputLabel">Texto a Analizar:</label>
+                <textarea id="inputText" rows="3" placeholder="Ingresa cualquier texto o idioma aquí..."></textarea>
+            </div>
+
+            <div class="control-group">
+                <label for="targetLang" id="langLabel">Protocolo Objetivo:</label>
+                <select id="targetLang">
+                    <option value="morse">Código Morse (Pulso Taquiónico) ⚡</option>
+                    <option value="snake">Idioma Serpiente (Siseo Parsel Avanzado) 🐍</option>
+                    <option value="neko">Idioma Neko Anime (Nya Mode 🐾)</option>
+                </select>
+            </div>
+
+            <button class="main-btn" onclick="startTranslationProcess()">Ejecutar Análisis C-137</button>
+
+            <div class="scan-overlay" id="scanOverlay">
+                <div class="progress-bar" id="progressBar"></div>
+                <div class="scan-text" id="scanText">[SINTONIZANDO FRECUENCIAS CUÁNTICAS...]</div>
+            </div>
+
+            <div class="control-group" style="margin-top: 20px;">
+                <div class="light-container">
+                    <label style="margin: 0;">Resultado de Salida:</label>
+                    <div class="signal-light" id="signalLight"></div>
+                </div>
+                <div class="output-box" id="outputText">Esperando comando...</div>
+                
+                <div class="action-buttons">
+                    <button class="btn-play" id="btnPlay" onclick="playCurrentSignal()">Reproducir Señal / Voz</button>
+                    <button class="btn-copy" id="btnCopy" onclick="copyToClipboard()">Copiar Resultado</button>
+                </div>
+            </div>
+
+            <!-- TELÉGRAFO MANUAL -->
+            <div class="telegraph-section">
+                <label>Pulsador Telégrafo Morse C-137 (Clics o Tecla ESPACIO):</label>
+                <button class="telegraph-btn" id="telegraphBtn">PULSAR / ESPACIO</button>
+
+                <div style="margin-top: 10px;">
+                    <label style="font-size: 0.8rem;">Código Capturado:</label>
+                    <div class="realtime-box" id="realtimeMorse">[Pulsaciones...]</div>
+                </div>
+
+                <div style="margin-top: 10px;">
+                    <label style="font-size: 0.8rem;">Traducción en Tiempo Real (Texto):</label>
+                    <div class="realtime-box" id="realtimeText">[Esperando entrada...]</div>
+                    <button class="btn-clear" onclick="clearTelegraph()">Limpiar Telégrafo</button>
+                </div>
+            </div>
+
+            <button class="collapsible-btn" onclick="toggleCheatSheet()">
+                <span>MATRIZ DE EQUIVALENCIAS MORSE</span>
+                <span id="cheatIcon">▼</span>
+            </button>
+            <div class="collapsible-content" id="cheatSheetContent">
+                <div class="morse-grid" id="morseGrid"></div>
+            </div>
+        </div>
+
+        <!-- PESTAÑA ESCÁNER DE OBJETOS CON IA REAL -->
+        <div id="tab-escaner" class="tab-content">
+            <label>Escáner Óptico de IA Real (TensorFlow COCO-SSD):</label>
+            <div class="camera-viewport">
+                <video id="videoObject" autoplay playsinline muted></video>
+                <canvas id="canvasOverlay" class="overlay-canvas"></canvas>
+                <div class="scanner-laser" id="laserObject"></div>
+            </div>
+            <button class="main-btn" onclick="toggleObjectIA()">Activar/Desactivar Escáner IA Real</button>
+            <div class="output-box" id="scanObjectResult" style="margin-top: 15px;">Presiona el botón para iniciar la detección con Inteligencia Artificial.</div>
+        </div>
+
+        <!-- PESTAÑA PRODUCTOS -->
+        <div id="tab-productos" class="tab-content">
+            <label>Lector de Código de Barras de Productos:</label>
+            <div class="camera-viewport" id="barcodeViewport">
+                <div class="scanner-laser" id="laserBarcode"></div>
+            </div>
+            <button class="main-btn" onclick="startBarcodeScanner()">Activar Lector de Código de Barras</button>
+            <div id="productResult" style="margin-top: 15px;"></div>
+        </div>
+
+        <!-- PESTAÑA CONFIGURACIÓN COLOR -->
+        <div id="tab-config" class="tab-content">
+            <label>Selector de Tema Neón Custom:</label>
+            <div style="display: flex; align-items: center; gap: 15px; margin-top: 10px;">
+                <input type="color" id="colorPicker" value="#00ff88" onchange="changeColor(this.value)" style="width:50px; height:50px; border:none; cursor:pointer;">
+                <span>Selecciona tu color preferido</span>
+            </div>
+            
+            <label style="margin-top: 20px;">Presets Directos:</label>
+            <div class="color-presets">
+                <div class="color-circle" style="background:#00ff88;" onclick="changeColor('#00ff88')"></div>
+                <div class="color-circle" style="background:#b026ff;" onclick="changeColor('#b026ff')"></div>
+                <div class="color-circle" style="background:#00d8ff;" onclick="changeColor('#00d8ff')"></div>
+                <div class="color-circle" style="background:#ff0055;" onclick="changeColor('#ff0055')"></div>
+                <div class="color-circle" style="background:#ffcc00;" onclick="changeColor('#ffcc00')"></div>
+            </div>
+        </div>
+
+    </div>
+
+    <script>
+        const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        let currentMorseResult = "";
+        let currentRawOutput = "";
+        let currentTargetLang = "morse";
+
+        let activeOscillator = null;
+        let pressStartTime = 0;
+        let pauseTimer = null;
+        let capturedMorse = "";
+
+        // IA Object Variables
+        let cocoModel = null;
+        let isDetectingObjects = false;
+        let objectStream = null;
+
+        const translationDict = {
+            "person": "Persona", "cell phone": "Celular", "laptop": "Laptop/Computadora", "mouse": "Mouse/Ratón",
+            "keyboard": "Teclado", "bottle": "Botella", "cup": "Taza", "book": "Libro", "chair": "Silla",
+            "dog": "Perro", "cat": "Gato", "tv": "Televisor/Pantalla", "backpack": "Mochila", "clock": "Reloj",
+            "scissors": "Tijeras", "pen": "Pluma/Lápiz", "banana": "Plátano", "apple": "Manzana"
+        };
+
+        const morseCode = {
+            'A': '.-', 'B': '-...', 'C': '-.-.', 'D': '-..', 'E': '.', 'F': '..-.', 'G': '--.', 'H': '....',
+            'I': '..', 'J': '.---', 'K': '-.-', 'L': '.-..', 'M': '--', 'N': '-.', 'O': '---', 'P': '.--.',
+            'Q': '--.-', 'R': '.-.', 'S': '...', 'T': '-', 'U': '..-', 'V': '...-', 'W': '.--', 'X': '-..-',
+            'Y': '-.--', 'Z': '--..', '1': '.----', '2': '..---', '3': '...--', '4': '....-', '5': '.....',
+            '6': '-....', '7': '--...', '8': '---..', '9': '----.', '0': '-----'
+        };
+        const reverseMorseCode = Object.fromEntries(Object.entries(morseCode).map(([k, v]) => [v, k]));
+
+        function renderMorseGrid() {
+            const grid = document.getElementById('morseGrid');
+            grid.innerHTML = '';
+            Object.entries(morseCode).forEach(([char, code]) => {
+                const item = document.createElement('div');
+                item.className = 'morse-item';
+                item.innerHTML = `<span>${char}</span>${code}`;
+                grid.appendChild(item);
+            });
+        }
+        renderMorseGrid();
+
+        function toggleCheatSheet() {
+            const content = document.getElementById('cheatSheetContent');
+            const icon = document.getElementById('cheatIcon');
+            if (content.style.maxHeight) {
+                content.style.maxHeight = null;
+                icon.innerText = '▼';
+            } else {
+                content.style.maxHeight = content.scrollHeight + "px";
+                icon.innerText = '▲';
+            }
+        }
+
+        function switchTab(tabId, evt) {
+            playBeep(900, 0.05);
+            document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
+            document.querySelectorAll('.tab-content').forEach(content => content.classList.remove('active'));
+            
+            if(evt && evt.target) evt.target.classList.add('active');
+            document.getElementById('tab-' + tabId).classList.add('active');
+        }
+
+        function changeColor(color) {
+            document.documentElement.style.setProperty('--prime-color', color);
+            document.documentElement.style.setProperty('--prime-glow', color + '70');
+            
+            let dark = color === '#00ff88' ? '#003311' : (color === '#b026ff' ? '#3b0066' : '#002b3d');
+            document.documentElement.style.setProperty('--prime-dark', dark);
+            playBeep(1200, 0.08);
+        }
+
+        function startTone(freq = 850) {
+            if (audioCtx.state === 'suspended') audioCtx.resume();
+            if (activeOscillator) return;
+
+            activeOscillator = audioCtx.createOscillator();
+            const gain = audioCtx.createGain();
+            activeOscillator.type = 'sawtooth';
+            activeOscillator.frequency.value = freq;
+            gain.gain.setValueAtTime(0.06, audioCtx.currentTime);
+            activeOscillator.connect(gain);
+            gain.connect(audioCtx.destination);
+            activeOscillator.start();
+
+            document.getElementById('signalLight').classList.add('active');
+        }
+
+        function stopTone() {
+            if (activeOscillator) {
+                activeOscillator.stop();
+                activeOscillator.disconnect();
+                activeOscillator = null;
+            }
+            document.getElementById('signalLight').classList.remove('active');
+        }
+
+        function playBeep(freq, duration) {
+            if (audioCtx.state === 'suspended') audioCtx.resume();
+            const osc = audioCtx.createOscillator();
+            const gain = audioCtx.createGain();
+            osc.type = 'sine';
+            osc.frequency.value = freq;
+            gain.gain.setValueAtTime(0.08, audioCtx.currentTime);
+            gain.gain.exponentialRampToValueAtTime(0.00001, audioCtx.currentTime + duration);
+            osc.connect(gain);
+            gain.connect(audioCtx.destination);
+            osc.start();
+            osc.stop(audioCtx.currentTime + duration);
+        }
+
+        function playSnakeHiss() {
+            if (audioCtx.state === 'suspended') audioCtx.resume();
+            const bufferSize = audioCtx.sampleRate * 0.18;
+            const buffer = audioCtx.createBuffer(1, bufferSize, audioCtx.sampleRate);
+            const data = buffer.getChannelData(0);
+            for (let i = 0; i < bufferSize; i++) data[i] = Math.random() * 2 - 1;
+            const noise = audioCtx.createBufferSource();
+            noise.buffer = buffer;
+            const filter = audioCtx.createBiquadFilter();
+            filter.type = 'bandpass';
+            filter.frequency.value = 3500;
+            
+            const gain = audioCtx.createGain();
+            gain.gain.setValueAtTime(0.09, audioCtx.currentTime);
+            gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.18);
+
+            noise.connect(filter);
+            filter.connect(gain);
+            gain.connect(audioCtx.destination);
+            noise.start();
+        }
+
+        function playNekoSound() {
+            if (audioCtx.state === 'suspended') audioCtx.resume();
+            const osc = audioCtx.createOscillator();
+            const gain = audioCtx.createGain();
+            osc.type = 'triangle';
+            const now = audioCtx.currentTime;
+            osc.frequency.setValueAtTime(600, now);
+            osc.frequency.exponentialRampToValueAtTime(950, now + 0.15);
+            osc.frequency.exponentialRampToValueAtTime(400, now + 0.35);
+
+            gain.gain.setValueAtTime(0.12, now);
+            gain.gain.exponentialRampToValueAtTime(0.001, now + 0.35);
+
+            osc.connect(gain);
+            gain.connect(audioCtx.destination);
+            osc.start(now);
+            osc.stop(now + 0.35);
+        }
+
+        function toggleMode() {
+            const mode = document.getElementById('modeSelect').value;
+            const inputLabel = document.getElementById('inputLabel');
+            const inputText = document.getElementById('inputText');
+
+            if (mode === 'encode') {
+                inputLabel.innerText = "Texto a Analizar:";
+                inputText.placeholder = "Ingresa cualquier texto o idioma aquí...";
+            } else {
+                inputLabel.innerText = "Código, Siseo o Neko a Decodificar:";
+                inputText.placeholder = "Ingresa el texto a decodificar...";
+            }
+        }
+
+        function translateToMorse(text) {
+            return text.toUpperCase().split('').map(char => morseCode[char] || char).join(' ');
+        }
+
+        function translateToSnake(text) {
+            return text.toLowerCase()
+                .replace(/s+/g, 'sssss').replace(/z+/g, 'hssss').replace(/x+/g, 'kssss')
+                .replace(/c([ei])/g, 'sss$1').replace(/r/g, 'shh').replace(/f/g, 'fffss')
+                .replace(/a/g, 'ash').replace(/e/g, 'ess').replace(/i/g, 'iss')
+                .replace(/o/g, 'osss').replace(/u/g, 'ush');
+        }
+
+        function translateToNeko(text) {
+            let words = text.toLowerCase().split(' ');
+            let result = words.map(w => (w.length > 3 && Math.random() > 0.4) ? w + " nya" : w).join(' ');
+            return "Chi! " + result.replace(/hola/g, "hola nya")
+                                 .replace(/gracias/g, "arigatou nya")
+                                 .replace(/adios/g, "sayonara nya") + " ~nya! 🐾";
+        }
+
+        function decodeFromMorse(morse) {
+            return morse.trim().split(' ').map(code => code === '/' ? ' ' : (reverseMorseCode[code] || '?')).join('');
+        }
+
+        function decodeFromSnake(snakeText) {
+            return snakeText.toLowerCase()
+                .replace(/hssss/g, 'z').replace(/kssss/g, 'x').replace(/sssss/g, 's')
+                .replace(/fffss/g, 'f').replace(/sss([ei])/g, 'c$1').replace(/shh/g, 'r')
+                .replace(/ash/g, 'a').replace(/ess/g, 'e').replace(/iss/g, 'i')
+                .replace(/osss/g, 'o').replace(/ush/g, 'u');
+        }
+
+        function decodeFromNeko(text) {
+            return text.replace(/nya/gi, '').replace(/Chi!/gi, '').replace(/~/g, '').replace(/🐾/g, '').replace(/arigatou/gi, 'gracias').replace(/sayonara/gi, 'adiós').trim();
+        }
+
+        function startTranslationProcess() {
+            const input = document.getElementById('inputText').value;
+            const targetLang = document.getElementById('targetLang').value;
+            const mode = document.getElementById('modeSelect').value;
+            const overlay = document.getElementById('scanOverlay');
+            const progressBar = document.getElementById('progressBar');
+            const scanText = document.getElementById('scanText');
+            const output = document.getElementById('outputText');
+            const btnPlay = document.getElementById('btnPlay');
+            const btnCopy = document.getElementById('btnCopy');
+
+            if (!input.trim()) {
+                output.innerText = "[ERROR]: INGRESA DATO VÁLIDO PARA ANALIZAR.";
+                btnPlay.style.display = 'none';
+                btnCopy.style.display = 'none';
+                return;
+            }
+
+            currentTargetLang = targetLang;
+            overlay.style.display = 'block';
+            output.innerText = "PROCESANDO MATRIZ C-137...";
+            btnPlay.style.display = 'none';
+            btnCopy.style.display = 'none';
+            progressBar.style.width = '0%';
+
+            let progress = 0;
+            const logs = [
+                "[SINTONIZANDO FRECUENCIAS CUÁNTICAS...]",
+                "[ESTABILIZANDO MATRIZ NEÓN...]",
+                "[PROCESANDO SINTAXIS MULTIVERSAL...]",
+                "[DECODIFICACIÓN C-137 FINALIZADA]"
+            ];
+
+            const interval = setInterval(() => {
+                progress += 25;
+                progressBar.style.width = progress + '%';
+                
+                if (progress <= 100) {
+                    scanText.innerText = logs[(progress / 25) - 1];
+                    playBeep(950 + (progress * 6), 0.08);
+                }
+
+                if (progress >= 100) {
+                    clearInterval(interval);
+                    setTimeout(() => {
+                        overlay.style.display = 'none';
+
+                        if (mode === 'encode') {
+                            if (targetLang === 'morse') {
+                                currentMorseResult = translateToMorse(input);
+                                currentRawOutput = currentMorseResult;
+                                output.innerText = currentMorseResult;
+                                btnPlay.style.display = 'inline-block';
+                                playCurrentSignal();
+                            } else if (targetLang === 'snake') {
+                                currentRawOutput = translateToSnake(input);
+                                output.innerText = currentRawOutput;
+                                playSnakeHiss();
+                            } else if (targetLang === 'neko') {
+                                currentRawOutput = translateToNeko(input);
+                                output.innerText = currentRawOutput;
+                                btnPlay.style.display = 'inline-block';
+                                playNekoSound();
+                            }
+                        } else {
+                            if (targetLang === 'morse') {
+                                currentRawOutput = decodeFromMorse(input);
+                                output.innerText = currentRawOutput;
+                                playBeep(1300, 0.2);
+                            } else if (targetLang === 'snake') {
+                                currentRawOutput = decodeFromSnake(input);
+                                output.innerText = currentRawOutput;
+                                playSnakeHiss();
+                            } else if (targetLang === 'neko') {
+                                currentRawOutput = decodeFromNeko(input);
+                                output.innerText = currentRawOutput;
+                                playNekoSound();
+                            }
+                        }
+
+                        btnCopy.style.display = 'inline-block';
+                    }, 300);
+                }
+            }, 250);
+        }
+
+        async function playCurrentSignal() {
+            if (currentTargetLang === 'morse') {
+                const light = document.getElementById('signalLight');
+                const dotUnit = 90;
+
+                for (let i = 0; i < currentMorseResult.length; i++) {
+                    const char = currentMorseResult[i];
+                    if (char === '.') {
+                        light.classList.add('active');
+                        playBeep(950, dotUnit / 1000);
+                        await new Promise(r => setTimeout(r, dotUnit));
+                        light.classList.remove('active');
+                        await new Promise(r => setTimeout(r, dotUnit));
+                    } else if (char === '-') {
+                        light.classList.add('active');
+                        playBeep(950, (dotUnit * 3) / 1000);
+                        await new Promise(r => setTimeout(r, dotUnit * 3));
+                        light.classList.remove('active');
+                        await new Promise(r => setTimeout(r, dotUnit));
+                    } else if (char === ' ') {
+                        await new Promise(r => setTimeout(r, dotUnit * 2));
+                    }
+                }
+            } else if (currentTargetLang === 'neko') {
+                playNekoSound();
+                if ('speechSynthesis' in window) {
+                    let msg = new SpeechSynthesisUtterance(currentRawOutput);
+                    msg.pitch = 1.6;
+                    msg.rate = 1.1;
+                    window.speechSynthesis.speak(msg);
+                }
+            }
+        }
+
+        function copyToClipboard() {
+            if (!currentRawOutput) return;
+
+            navigator.clipboard.writeText(currentRawOutput).then(() => {
+                const btnCopy = document.getElementById('btnCopy');
+                const originalText = btnCopy.innerText;
+                playBeep(1600, 0.1);
+                btnCopy.innerText = "¡COPIADO!";
+                btnCopy.style.backgroundColor = "var(--prime-color)";
+                btnCopy.style.color = "#000";
+
+                setTimeout(() => {
+                    btnCopy.innerText = originalText;
+                    btnCopy.style.backgroundColor = "var(--prime-dark)";
+                    btnCopy.style.color = "var(--prime-color)";
+                }, 1500);
+            });
+        }
+
+        // TELÉGRAFO LOGIC
+        const telegraphBtn = document.getElementById('telegraphBtn');
+        const realtimeMorse = document.getElementById('realtimeMorse');
+        const realtimeText = document.getElementById('realtimeText');
+
+        function handlePressStart(e) {
+            if (e) e.preventDefault();
+            clearTimeout(pauseTimer);
+            pressStartTime = Date.now();
+            startTone(850);
+            telegraphBtn.classList.add('active');
+        }
+
+        function handlePressEnd(e) {
+            if (e) e.preventDefault();
+            if (!pressStartTime) return;
+            
+            stopTone();
+            telegraphBtn.classList.remove('active');
+
+            const duration = Date.now() - pressStartTime;
+            pressStartTime = 0;
+
+            if (duration < 180) {
+                capturedMorse += ".";
+            } else {
+                capturedMorse += "-";
+            }
+
+            realtimeMorse.innerText = capturedMorse;
+
+            pauseTimer = setTimeout(() => {
+                capturedMorse += " ";
+                realtimeMorse.innerText = capturedMorse;
+                realtimeText.innerText = decodeFromMorse(capturedMorse);
+            }, 600);
+        }
+
+        function clearTelegraph() {
+            capturedMorse = "";
+            realtimeMorse.innerText = "[Pulsaciones...]";
+            realtimeText.innerText = "[Esperando entrada...]";
+            playBeep(600, 0.1);
+        }
+
+        telegraphBtn.addEventListener('mousedown', handlePressStart);
+        telegraphBtn.addEventListener('mouseup', handlePressEnd);
+        telegraphBtn.addEventListener('touchstart', handlePressStart);
+        telegraphBtn.addEventListener('touchend', handlePressEnd);
+
+        window.addEventListener('keydown', (e) => {
+            if (e.code === 'Space' && e.target !== document.getElementById('inputText')) {
+                e.preventDefault();
+                if (!pressStartTime) handlePressStart();
+            }
+        });
+
+        window.addEventListener('keyup', (e) => {
+            if (e.code === 'Space' && e.target !== document.getElementById('inputText')) {
+                e.preventDefault();
+                handlePressEnd();
+            }
+        });
+
+        // ESCÁNER DE OBJETOS CON IA REAL (TensorFlow.js)
+        async function toggleObjectIA() {
+            const resultBox = document.getElementById('scanObjectResult');
+            const video = document.getElementById('videoObject');
+            const canvas = document.getElementById('canvasOverlay');
+            const laser = document.getElementById('laserObject');
+
+            if (isDetectingObjects) {
+                isDetectingObjects = false;
+                if (objectStream) objectStream.getTracks().forEach(track => track.stop());
+                laser.style.display = 'none';
+                resultBox.innerText = "Escáner apagado.";
+                return;
+            }
+
+            resultBox.innerText = "Cargando Red Neuronal IA (COCO-SSD)... Por favor espera unos segundos.";
+            playBeep(1200, 0.1);
+
+            try {
+                if (!cocoModel) {
+                    cocoModel = await cocoSsd.load();
+                }
+
+                objectStream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment" } });
+                video.srcObject = objectStream;
+
+                video.onloadedmetadata = () => {
+                    video.play();
+                    canvas.width = video.videoWidth;
+                    canvas.height = video.videoHeight;
+                    isDetectingObjects = true;
+                    laser.style.display = 'block';
+                    resultBox.innerText = "IA ACTIVA C-137. Apunta la cámara a cualquier objeto...";
+                    detectObjectsLoop();
+                };
+
+            } catch (err) {
+                resultBox.innerText = "Error de cámara o IA: " + err.message;
+            }
+        }
+
+        async function detectObjectsLoop() {
+            if (!isDetectingObjects) return;
+
+            const video = document.getElementById('videoObject');
+            const canvas = document.getElementById('canvasOverlay');
+            const ctx = canvas.getContext('2d');
+            const resultBox = document.getElementById('scanObjectResult');
+
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+            const predictions = await cocoModel.detect(video);
+
+            let detectedText = [];
+
+            predictions.forEach(prediction => {
+                const [x, y, width, height] = prediction.bbox;
+                const name = translationDict[prediction.class] || prediction.class;
+                const score = Math.round(prediction.score * 100);
+
+                let neonColor = getComputedStyle(document.documentElement).getPropertyValue('--prime-color').trim() || '#00ff88';
+                ctx.strokeStyle = neonColor;
+                ctx.lineWidth = 3;
+                ctx.shadowColor = neonColor;
+                ctx.shadowBlur = 10;
+                ctx.strokeRect(x, y, width, height);
+
+                ctx.fillStyle = neonColor;
+                ctx.font = 'bold 16px Courier New';
+                ctx.fillRect(x, y > 20 ? y - 25 : y, ctx.measureText(`${name} ${score}%`).width + 10, 22);
+
+                ctx.fillStyle = '#000000';
+                ctx.fillText(`${name} ${score}%`, x + 5, y > 20 ? y - 8 : y + 15);
+
+                detectedText.push(`• ${name.toUpperCase()} (Precisión: ${score}%)`);
+            });
+
+            if (detectedText.length > 0) {
+                resultBox.innerHTML = `<strong>Detección IA en Tiempo Real:</strong><br>${detectedText.join('<br>')}`;
+            } else {
+                resultBox.innerText = "Buscando objetos... Apunta a un celular, persona, botella, teclado, taza, etc.";
+            }
+
+            requestAnimationFrame(detectObjectsLoop);
+        }
+
+        // ESCÁNER PRODUCTOS (CÓDIGO BARRAS REAL)
+        function startBarcodeScanner() {
+            const laser = document.getElementById('laserBarcode');
+            const productResult = document.getElementById('productResult');
+            laser.style.display = 'block';
+            playBeep(1200, 0.1);
+
+            Quagga.init({
+                inputStream: {
+                    name: "Live",
+                    type: "LiveStream",
+                    target: document.querySelector('#barcodeViewport')
+                },
+                decoder: {
+                    readers: ["code_128_reader", "ean_reader", "ean_8_reader", "upc_reader"]
+                }
+            }, function(err) {
+                if (err) {
+                    productResult.innerHTML = "<div class='output-box'>Error al iniciar escáner: " + err + "</div>";
+                    return;
+                }
+                Quagga.start();
+            });
+
+            Quagga.onDetected(function(data) {
+                let code = data.codeResult.code;
+                Quagga.stop();
+                laser.style.display = 'none';
+                playBeep(2000, 0.25);
+
+                fetchProductData(code);
+            });
+        }
+
+        async function fetchProductData(barcode) {
+            const productResult = document.getElementById('productResult');
+            productResult.innerHTML = "<div class='output-box'>Buscando producto con Código: " + barcode + "...</div>";
+
+            try {
+                let response = await fetch(`https://world.openfoodfacts.org/api/v0/product/${barcode}.json`);
+                let data = await response.json();
+
+                if (data.status === 1) {
+                    let prod = data.product;
+                    let name = prod.product_name || "Producto Genérico Multiversal";
+                    let brand = prod.brands || "Marca Desconocida";
+                    let stores = prod.stores || "Disponible en Tiendas Locales / Supermercados";
+                    
+                    productResult.innerHTML = `
+                        <div class="output-box">
+                            <h3 style="color:var(--prime-color); margin:0 0 10px 0;">${name}</h3>
+                            <p><strong>Marca:</strong> ${brand}</p>
+                            <p><strong>Código de Barras:</strong> ${barcode}</p>
+                            <p><strong>Tiendas Sugeridas:</strong> ${stores}</p>
+                        </div>
+                    `;
+                } else {
+                    productResult.innerHTML = `
+                        <div class="output-box">
+                            <h3 style="color:var(--prime-color); margin:0 0 10px 0;">Producto Escaneado: #${barcode}</h3>
+                            <p><strong>Estado:</strong> Registrado en la Base C-137</p>
+                            <p><strong>Tienda:</strong> Tienda Local / Walmart / Amazon</p>
+                        </div>
+                    `;
+                }
+            } catch (e) {
+                productResult.innerHTML = `
+                    <div class="output-box">
+                        <h3 style="color:var(--prime-color); margin:0 0 10px 0;">Código Capturado: ${barcode}</h3>
+                        <p>No se pudo conectar a la API global, pero el código fue registrado correctamente.</p>
+                    </div>
+                `;
+            }
+        }
+    </script>
+</body>
+</html>
